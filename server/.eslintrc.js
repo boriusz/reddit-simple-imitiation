@@ -7,6 +7,7 @@ module.exports = {
   parserOptions: { ecmaVersion: 12, sourceType: 'module' },
   ignorePatterns: ['node_modules/*', '.out/*', '!.prettierrc.js'],
   extends: ['eslint:recommended'],
+  plugins: ['prettier'],
   overrides: [
     {
       files: ['**/*.ts', '**/*.tsx'],

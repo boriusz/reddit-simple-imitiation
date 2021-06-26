@@ -1,13 +1,16 @@
 fragment EntirePost on Post {
+  id
+  createdAt
+  updatedAt
+  title
+  text
+  points
+  voteStatus
+  creator {
     id
-    createdAt
-    updatedAt
-    title
-    text
-    points
-    voteStatus
-    creator {
-        id
-        username
-    }
+    username
+  }
+  comments {
+    ...PostComment
+  }
 }

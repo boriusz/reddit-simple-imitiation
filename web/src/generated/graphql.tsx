@@ -14,6 +14,15 @@ export type Scalars = {
   Float: number;
 };
 
+export type Comment = {
+  __typename?: 'Comment';
+  value: Scalars['String'];
+  userId: Scalars['Float'];
+  user: User;
+  postId: Scalars['Float'];
+  post: Post;
+};
+
 export type CreatePostInput = {
   title: Scalars['String'];
   text: Scalars['String'];
@@ -36,6 +45,7 @@ export type Mutation = {
   register: UserResponse;
   login: UserResponse;
   logout: Scalars['Boolean'];
+  comment: Comment;
 };
 
 
@@ -83,6 +93,12 @@ export type MutationLoginArgs = {
   usernameOrEmail: Scalars['String'];
 };
 
+
+export type MutationCommentArgs = {
+  value: Scalars['String'];
+  postId: Scalars['Int'];
+};
+
 export type PaginatedPosts = {
   __typename?: 'PaginatedPosts';
   posts: Array<Post>;
@@ -100,6 +116,7 @@ export type Post = {
   points: Scalars['Float'];
   creator: User;
   upvotes?: Maybe<Array<Upvote>>;
+  comments: Array<Comment>;
   creatorId: Scalars['Float'];
   textSnippet: Scalars['String'];
 };
@@ -109,6 +126,8 @@ export type Query = {
   posts: PaginatedPosts;
   post?: Maybe<Post>;
   me?: Maybe<User>;
+  postComments: Array<Comment>;
+  userComments: Array<Comment>;
 };
 
 
@@ -120,6 +139,16 @@ export type QueryPostsArgs = {
 
 export type QueryPostArgs = {
   id: Scalars['Int'];
+};
+
+
+export type QueryPostCommentsArgs = {
+  postId: Scalars['Int'];
+};
+
+
+export type QueryUserCommentsArgs = {
+  userId: Scalars['Int'];
 };
 
 export type Upvote = {
@@ -157,6 +186,18 @@ export type EntirePostFragment = (
   & { creator: (
     { __typename?: 'User' }
     & Pick<User, 'id' | 'username'>
+  ), comments: Array<(
+    { __typename?: 'Comment' }
+    & PostCommentFragment
+  )> }
+);
+
+export type PostCommentFragment = (
+  { __typename?: 'Comment' }
+  & Pick<Comment, 'value'>
+  & { user: (
+    { __typename?: 'User' }
+    & Pick<User, 'id' | 'username'>
   ) }
 );
 
@@ -166,7 +207,10 @@ export type PostSnippetFragment = (
   & { creator: (
     { __typename?: 'User' }
     & Pick<User, 'id' | 'username'>
-  ) }
+  ), comments: Array<(
+    { __typename?: 'Comment' }
+    & PostCommentFragment
+  )> }
 );
 
 export type RegularUserFragment = (
@@ -342,6 +386,15 @@ export type PostsQuery = (
   ) }
 );
 
+export const PostCommentFragmentDoc = gql`
+    fragment PostComment on Comment {
+  value
+  user {
+    id
+    username
+  }
+}
+    `;
 export const EntirePostFragmentDoc = gql`
     fragment EntirePost on Post {
   id
@@ -355,8 +408,11 @@ export const EntirePostFragmentDoc = gql`
     id
     username
   }
+  comments {
+    ...PostComment
+  }
 }
-    `;
+    ${PostCommentFragmentDoc}`;
 export const PostSnippetFragmentDoc = gql`
     fragment PostSnippet on Post {
   id
@@ -370,8 +426,11 @@ export const PostSnippetFragmentDoc = gql`
     id
     username
   }
+  comments {
+    ...PostComment
+  }
 }
-    `;
+    ${PostCommentFragmentDoc}`;
 export const RegularUserFragmentDoc = gql`
     fragment RegularUser on User {
   id

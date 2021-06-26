@@ -5,11 +5,13 @@ import {
   CreateDateColumn,
   Entity,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm'
 import { User } from './User'
 import { Upvote } from './Upvote'
+import { Comment } from './Comment'
 
 @ObjectType()
 @Entity()
@@ -42,12 +44,16 @@ export class Post extends BaseEntity {
   points: number
 
   @Field()
-  @ManyToOne(() => User, (user) => user.posts)
+  @ManyToOne(() => User, (user) => user.posts, { eager: true })
   creator: User
 
   @Field(() => [Upvote], { nullable: true })
-  @ManyToOne(() => Upvote, (upvote) => upvote.post)
+  @OneToMany(() => Upvote, (upvote) => upvote.post, { eager: true })
   upvotes: Upvote[]
+
+  @Field(() => [Comment])
+  @OneToMany(() => Comment, (comment) => comment.post, { eager: true })
+  comments: Comment[]
 
   @Field()
   @Column({ type: 'int' })

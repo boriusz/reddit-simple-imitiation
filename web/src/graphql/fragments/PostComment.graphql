@@ -1,0 +1,7 @@
+fragment PostComment on Comment {
+  value
+  user {
+    id
+    username
+  }
+}

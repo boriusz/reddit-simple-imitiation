@@ -16,7 +16,7 @@ import { CreatePostInput } from '../utils/CreatePostInput'
 import { MyContext } from '../types'
 import { isAuth } from '../middleware/isAuth'
 import { User } from '../entities/User'
-import { getConnection } from 'typeorm'
+import { FindManyOptions, getConnection, LessThan } from 'typeorm'
 import { Upvote } from '../entities/Upvote'
 
 @ObjectType()
@@ -34,63 +34,50 @@ export class PostResolver {
     return root.text.length > 50 ? root.text.slice(0, 50) + '...' : root.text
   }
 
-  @FieldResolver(() => User)
-  creator(@Root() post: Post, @Ctx() { userLoader }: MyContext): Promise<User> {
-    return userLoader.load(post.creatorId)
-  }
-
-  @FieldResolver(() => Int, { nullable: true })
-  async voteStatus(
-    @Root() post: Post,
-    @Ctx() { upvoteLoader, req }: MyContext
-  ): Promise<number | null> {
-    if (!req.session.userId) return null
-    const upvote = await upvoteLoader.load({ postId: post.id, userId: req.session.userId })
-    return upvote ? upvote.value : null
-  }
+  // @FieldResolver(() => Int, { nullable: true })
+  // async voteStatus(
+  //   @Root() post: Post,
+  //   @Ctx() { upvoteLoader, req }: MyContext
+  // ): Promise<number | null> {
+  //   if (!req.session.userId) return null
+  //   const upvote = await upvoteLoader.load({ postId: post.id, userId: req.session.userId })
+  //   return upvote ? upvote.value : null
+  // }
 
   @Query(() => PaginatedPosts)
   async posts(
     @Arg('limit', () => Int) limit: number,
-    @Arg('cursor', () => String, { nullable: true }) cursor: string | null
+    @Arg('cursor', () => String, { nullable: true }) cursor: string | null,
+    @Ctx()
+    {
+      req: {
+        session: { userId },
+      },
+    }: MyContext
   ): Promise<PaginatedPosts> {
     const actualLimit = Math.min(50, limit) + 1
 
-    const replacements: unknown[] = [actualLimit]
-
+    const options: FindManyOptions = {
+      take: actualLimit,
+      order: { createdAt: 'DESC' },
+    }
     if (cursor) {
-      replacements.push(new Date(parseInt(cursor)))
+      options.where = {
+        createdAt: LessThan(new Date(parseInt(cursor))),
+      }
     }
 
-    const posts = await getConnection().query(
-      `
-        SELECT p.*
-        FROM post p 
-      ${cursor ? `WHERE p."createdAt" < $2` : ''} 
-      ORDER BY p."createdAt" DESC limit $1
-    `,
-      replacements
-    )
+    const posts = (await Post.find(options)).map((p) => ({
+      ...p,
+      voteStatus: p.upvotes.find((uv: Upvote) => uv.userId === userId)?.value ?? null,
+    }))
 
     return { posts: posts.slice(0, actualLimit - 1), hasMore: posts.length === actualLimit }
   }
 
   @Query(() => Post, { nullable: true })
-  async post(
-    @Arg('id', () => Int) id: number
-    // @Ctx() { req }: MyContext
-  ): Promise<Post | undefined> {
+  async post(@Arg('id', () => Int) id: number): Promise<Post | undefined> {
     return Post.findOne(id)
-    // const post = await getConnection().query(
-    //   `
-    //     SELECT post.*
-    //     from post
-    //     LEFT JOIN "user" u on u.id = post."creatorId"
-    //     where post.id=${id}
-    // `,
-    //   [req.session.userId ?? 0]
-    // )
-    // return post[0]
   }
 
   @Mutation(() => Post)

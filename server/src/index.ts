@@ -12,6 +12,7 @@ import cors from 'cors'
 import { createConnection } from 'typeorm'
 import { createUserLoader } from './utils/createUserLoader'
 import { createUpvoteLoader } from './utils/createUpvoteLoader'
+import { CommentResolver } from './resolvers/comment'
 
 const PORT = process.env.PORT || 4000
 
@@ -47,7 +48,7 @@ const main = async (): Promise<void> => {
 
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [PostResolver, UserResolver],
+      resolvers: [PostResolver, UserResolver, CommentResolver],
       validate: false,
     }),
     context: ({ req, res }): MyContext => ({

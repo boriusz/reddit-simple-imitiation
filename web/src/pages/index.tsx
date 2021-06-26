@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { MeDocument, PostsDocument, useMeQuery, usePostsQuery } from '../generated/graphql'
 import Layout from '../components/Layout'
 import { CreatePostModal } from '../components/CreatePostModal'
@@ -18,6 +18,12 @@ const Index: NextPage = () => {
     variables: { limit: 10, cursor: null as null | string },
     notifyOnNetworkStatusChange: true,
   })
+
+  useEffect(() => {
+    return () => {
+      console.log('unload')
+    }
+  }, [])
   const { data: meData, loading: meFetching } = useMeQuery()
 
   if (!postFetching && !postData) {

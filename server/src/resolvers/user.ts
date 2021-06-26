@@ -183,7 +183,7 @@ export class UserResolver {
       console.log(e)
     }
 
-    req.session!.userId = user.id
+    req.session.userId = user.id
 
     return {
       user,

@@ -3,8 +3,6 @@ import { Arg, Ctx, Int, Mutation, Query, Resolver, UseMiddleware } from 'type-gr
 import { Comment } from '../entities/Comment'
 import { isAuth } from '../middleware/isAuth'
 import { MyContext } from '../types'
-import { Post } from '../entities/Post'
-import { User } from '../entities/User'
 
 @Resolver(Comment)
 export class CommentResolver {
@@ -18,35 +16,55 @@ export class CommentResolver {
     return Comment.find({ where: { userId } })
   }
 
-  // @FieldResolver(() => User)
-  // async commenter(@Root() comment: Comment): Promise<User | undefined> {
-  //   const user = await User.findOne({ where: { id: comment.userId } })
-  //   return user
-  // }
-
   @Mutation(() => Comment)
   @UseMiddleware(isAuth)
-  async comment(
+  async createComment(
     @Arg('postId', () => Int) postId: number,
-    @Arg('value', () => String) value: string,
+    @Arg('text', () => String) text: string,
     @Ctx() { req }: MyContext
   ): Promise<Comment | null> {
     const { userId } = req.session
-    console.log(postId)
-
-    const post = await Post.findOne(postId)
-    const user = await User.findOne(userId)
-    if (!post || !user) {
-      return null
-    }
 
     const comment = new Comment()
-    comment.value = value
+    comment.text = text
     comment.userId = userId
-    comment.post = post
     comment.postId = postId
-    comment.user = user
 
     return await comment.save()
+  }
+
+  @Mutation(() => Comment)
+  @UseMiddleware(isAuth)
+  async editComment(
+    @Arg('commentId', () => Int) commentId: number,
+    @Arg('text', () => String) text: string,
+    @Ctx() { req }: MyContext
+  ): Promise<Comment | null> {
+    const { userId } = req.session
+
+    const comment = await Comment.findOne(commentId)
+
+    if (comment?.userId === userId) {
+      comment.text = text
+      return await comment.save()
+    }
+
+    return null
+  }
+
+  @Mutation(() => Comment, { nullable: true })
+  @UseMiddleware(isAuth)
+  async deleteComment(
+    @Arg('commentId', () => Int) commentId: number,
+    @Ctx() { req }: MyContext
+  ): Promise<Comment | null> {
+    const { userId } = req.session
+
+    const comment = await Comment.findOne(commentId)
+
+    if (comment?.userId === userId) {
+      return await comment.remove()
+    }
+    return null
   }
 }

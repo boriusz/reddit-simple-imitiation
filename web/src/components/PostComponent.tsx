@@ -25,9 +25,11 @@ export const PostComponent: React.FC<PostProps> = ({ post }) => {
         <UpvoteSection post={post} />
         <Box flex={1}>
           <NextLink href={'/post/[id]'} as={`/post/${post.id}`}>
-            <Link mt={4}>
-              <Heading fontSize={'xl'}>{post.title}</Heading>
-            </Link>
+            {/*<Link mt={4} href={`/post/${post.id}`}>*/}
+            <Heading as={Link} fontSize={'xl'} href={`/post/${post.id}`}>
+              {post.title}
+            </Heading>
+            {/*</Link>*/}
           </NextLink>
           <Text>by {post.creator.username}</Text>
           <Flex flex={1}>
@@ -53,7 +55,7 @@ export const PostComponent: React.FC<PostProps> = ({ post }) => {
           </Flex>
         </Box>
       </Flex>
-      <CommentSection comments={post.comments as PostCommentFragment[]} />
+      <CommentSection comments={post.comments as PostCommentFragment[]} postId={post.id} />
     </Box>
   )
 }

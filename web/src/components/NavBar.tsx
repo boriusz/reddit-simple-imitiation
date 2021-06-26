@@ -40,7 +40,7 @@ const NavBar: FC = () => {
           </NextLink>
 
           <NextLink href={'/register'}>
-            <Link mr={2}>register</Link>
+            <Link mr={2}>Register</Link>
           </NextLink>
         </>
       )

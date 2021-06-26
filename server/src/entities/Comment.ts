@@ -1,17 +1,29 @@
-import { Field, ObjectType } from 'type-graphql'
-import { BaseEntity, Column, Entity, ManyToOne, PrimaryColumn } from 'typeorm'
+import { Field, Int, ObjectType } from 'type-graphql'
+import {
+  BaseEntity,
+  Column,
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm'
 import { Post } from './Post'
 import { User } from './User'
 
 @ObjectType()
 @Entity()
 export class Comment extends BaseEntity {
-  @Field()
-  @Column()
-  value: string
+  @Field(() => Int)
+  @PrimaryGeneratedColumn()
+  id: number
 
   @Field()
-  @PrimaryColumn()
+  @Column()
+  text: string
+
+  @Field()
+  @Column()
   userId: number
 
   @Field(() => User)
@@ -19,10 +31,18 @@ export class Comment extends BaseEntity {
   user: User
 
   @Field()
-  @PrimaryColumn()
+  @Column()
   postId: number
 
   @Field(() => Post)
-  @ManyToOne(() => Post, (post) => post.comments)
+  @ManyToOne(() => Post, (post) => post.comments, { onDelete: 'CASCADE' })
   post: Post
+
+  @Field(() => String)
+  @CreateDateColumn()
+  createdAt: Date
+
+  @Field(() => String)
+  @UpdateDateColumn()
+  updatedAt: Date
 }

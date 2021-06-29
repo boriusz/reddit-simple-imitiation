@@ -50,7 +50,7 @@ export type Mutation = {
   logout: Scalars['Boolean'];
   createComment: Comment;
   editComment: Comment;
-  deleteComment?: Maybe<Comment>;
+  deleteComment?: Maybe<Scalars['Boolean']>;
 };
 
 
@@ -134,6 +134,7 @@ export type Post = {
   upvotes?: Maybe<Array<Upvote>>;
   comments: Array<Comment>;
   creatorId: Scalars['Float'];
+  commentsNumber: Scalars['Int'];
   textSnippet: Scalars['String'];
 };
 
@@ -210,7 +211,7 @@ export type EntirePostFragment = (
 
 export type PostCommentFragment = (
   { __typename?: 'Comment' }
-  & Pick<Comment, 'id' | 'text' | 'createdAt'>
+  & Pick<Comment, 'id' | 'createdAt' | 'updatedAt' | 'text'>
   & { user: (
     { __typename?: 'User' }
     & Pick<User, 'id' | 'username'>
@@ -219,14 +220,11 @@ export type PostCommentFragment = (
 
 export type PostSnippetFragment = (
   { __typename?: 'Post' }
-  & Pick<Post, 'id' | 'createdAt' | 'updatedAt' | 'title' | 'textSnippet' | 'points' | 'voteStatus'>
+  & Pick<Post, 'id' | 'createdAt' | 'updatedAt' | 'title' | 'textSnippet' | 'points' | 'voteStatus' | 'commentsNumber'>
   & { creator: (
     { __typename?: 'User' }
     & Pick<User, 'id' | 'username'>
-  ), comments: Array<(
-    { __typename?: 'Comment' }
-    & PostCommentFragment
-  )> }
+  ) }
 );
 
 export type RegularUserFragment = (
@@ -288,10 +286,7 @@ export type DeleteCommentMutationVariables = Exact<{
 
 export type DeleteCommentMutation = (
   { __typename?: 'Mutation' }
-  & { deleteComment?: Maybe<(
-    { __typename?: 'Comment' }
-    & Pick<Comment, 'id'>
-  )> }
+  & Pick<Mutation, 'deleteComment'>
 );
 
 export type DeletePostMutationVariables = Exact<{
@@ -429,6 +424,19 @@ export type PostQuery = (
   )> }
 );
 
+export type PostCommentsQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type PostCommentsQuery = (
+  { __typename?: 'Query' }
+  & { postComments: Array<(
+    { __typename?: 'Comment' }
+    & PostCommentFragment
+  )> }
+);
+
 export type PostsQueryVariables = Exact<{
   limit: Scalars['Int'];
   cursor?: Maybe<Scalars['String']>;
@@ -450,8 +458,9 @@ export type PostsQuery = (
 export const PostCommentFragmentDoc = gql`
     fragment PostComment on Comment {
   id
-  text
   createdAt
+  updatedAt
+  text
   user {
     id
     username
@@ -489,11 +498,9 @@ export const PostSnippetFragmentDoc = gql`
     id
     username
   }
-  comments {
-    ...PostComment
-  }
+  commentsNumber
 }
-    ${PostCommentFragmentDoc}`;
+    `;
 export const RegularUserFragmentDoc = gql`
     fragment RegularUser on User {
   id
@@ -616,9 +623,7 @@ export type CreatePostMutationResult = Apollo.MutationResult<CreatePostMutation>
 export type CreatePostMutationOptions = Apollo.BaseMutationOptions<CreatePostMutation, CreatePostMutationVariables>;
 export const DeleteCommentDocument = gql`
     mutation DeleteComment($commentId: Int!) {
-  deleteComment(commentId: $commentId) {
-    id
-  }
+  deleteComment(commentId: $commentId)
 }
     `;
 export type DeleteCommentMutationFn = Apollo.MutationFunction<DeleteCommentMutation, DeleteCommentMutationVariables>;
@@ -995,6 +1000,41 @@ export function usePostLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<PostQ
 export type PostQueryHookResult = ReturnType<typeof usePostQuery>;
 export type PostLazyQueryHookResult = ReturnType<typeof usePostLazyQuery>;
 export type PostQueryResult = Apollo.QueryResult<PostQuery, PostQueryVariables>;
+export const PostCommentsDocument = gql`
+    query PostComments($id: Int!) {
+  postComments(postId: $id) {
+    ...PostComment
+  }
+}
+    ${PostCommentFragmentDoc}`;
+
+/**
+ * __usePostCommentsQuery__
+ *
+ * To run a query within a React component, call `usePostCommentsQuery` and pass it any options that fit your needs.
+ * When your component renders, `usePostCommentsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePostCommentsQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function usePostCommentsQuery(baseOptions: Apollo.QueryHookOptions<PostCommentsQuery, PostCommentsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<PostCommentsQuery, PostCommentsQueryVariables>(PostCommentsDocument, options);
+      }
+export function usePostCommentsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<PostCommentsQuery, PostCommentsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<PostCommentsQuery, PostCommentsQueryVariables>(PostCommentsDocument, options);
+        }
+export type PostCommentsQueryHookResult = ReturnType<typeof usePostCommentsQuery>;
+export type PostCommentsLazyQueryHookResult = ReturnType<typeof usePostCommentsLazyQuery>;
+export type PostCommentsQueryResult = Apollo.QueryResult<PostCommentsQuery, PostCommentsQueryVariables>;
 export const PostsDocument = gql`
     query Posts($limit: Int!, $cursor: String) {
   posts(limit: $limit, cursor: $cursor) {

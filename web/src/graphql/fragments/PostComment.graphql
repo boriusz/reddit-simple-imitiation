@@ -1,7 +1,8 @@
 fragment PostComment on Comment {
   id
-  text
   createdAt
+  updatedAt
+  text
   user {
     id
     username

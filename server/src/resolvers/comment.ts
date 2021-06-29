@@ -52,19 +52,20 @@ export class CommentResolver {
     return null
   }
 
-  @Mutation(() => Comment, { nullable: true })
+  @Mutation(() => Boolean, { nullable: true })
   @UseMiddleware(isAuth)
   async deleteComment(
     @Arg('commentId', () => Int) commentId: number,
     @Ctx() { req }: MyContext
-  ): Promise<Comment | null> {
+  ): Promise<boolean> {
     const { userId } = req.session
 
     const comment = await Comment.findOne(commentId)
 
     if (comment?.userId === userId) {
-      return await comment.remove()
+      await comment.remove()
+      return true
     }
-    return null
+    return false
   }
 }

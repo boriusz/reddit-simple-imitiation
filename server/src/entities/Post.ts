@@ -58,4 +58,7 @@ export class Post extends BaseEntity {
   @Field()
   @Column({ type: 'int' })
   creatorId: number
+
+  @Field(() => Int)
+  commentsNumber: number
 }

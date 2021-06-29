@@ -1,63 +1,65 @@
 import React, { useState } from 'react'
 import {
-  PostCommentFragment,
+  CreateCommentMutation,
+  PostSnippetFragment,
   useCreateCommentMutation,
-  useDeleteCommentMutation,
-  useMeQuery,
 } from '../generated/graphql'
-import { Box, Button, IconButton, Text } from '@chakra-ui/react'
-import { EditPostModal } from './EditPostModal'
-import { AddIcon, DeleteIcon } from '@chakra-ui/icons'
+import { Box, Button, IconButton } from '@chakra-ui/react'
+import { AddIcon, ChatIcon } from '@chakra-ui/icons'
 import { Form, Formik } from 'formik'
 import { InputField } from './InputField'
+import { CommentsStack } from './CommentsStack'
+import { ApolloCache, gql } from '@apollo/client'
 
 interface CommentSectionProps {
-  comments: PostCommentFragment[]
-  postId: number
+  post: PostSnippetFragment
 }
 
-export const CommentSection: React.FC<CommentSectionProps> = ({ comments, postId }) => {
-  const { data } = useMeQuery()
-  const [deleteComment] = useDeleteCommentMutation()
+const updateAfterComment = (postId: number, cache: ApolloCache<CreateCommentMutation>): void => {
+  const data = cache.readFragment<{ id: number; commentsNumber: number }>({
+    id: 'Post:' + postId,
+    fragment: gql`
+      fragment _ on Post {
+        id
+        commentsNumber
+      }
+    `,
+  })
+  if (data) {
+    cache.writeFragment({
+      id: 'Post:' + postId,
+      fragment: gql`
+        fragment __ on Post {
+          commentsNumber
+        }
+      `,
+      data: { id: postId, commentsNumber: data.commentsNumber + 1 },
+    })
+  }
+}
+
+export const CommentSection: React.FC<CommentSectionProps> = ({ post: { commentsNumber, id } }) => {
+  const [commentsVisible, setCommentsVisible] = useState(false)
   const [createComment] = useCreateCommentMutation()
 
   const [createCommentInput, setCreateCommentInput] = useState(false)
-  let body: JSX.Element
-  if (comments.length <= 0) {
-    body = <Text>No comments for now </Text>
-  } else {
-    body = (
-      <Box>
-        {comments
-          .slice()
-          ?.sort((a, b) => Number(b.createdAt) - Number(a.createdAt))
-          .map((com) => (
-            <Box shadow={'sm'} borderWidth={'1px'} key={com.id}>
-              <Text>by {com.user.username}</Text>
-              {com.text}
-              <Box ml={'auto'}>
-                {com.user.id === data?.me?.id ? (
-                  <>
-                    <EditPostModal postId={com.id} />
-                    <IconButton
-                      icon={<DeleteIcon />}
-                      aria-label={'Delete comment'}
-                      ml={1}
-                      size={'sm'}
-                      onClick={() =>
-                        deleteComment({
-                          variables: { commentId: com.id },
-                        })
-                      }
-                    />
-                  </>
-                ) : null}
-              </Box>
-            </Box>
-          ))}
-      </Box>
-    )
-  }
+  const commentsButton = (
+    <Box>
+      <IconButton
+        icon={<ChatIcon />}
+        aria-label={'Comments load and count'}
+        size={'sm'}
+        onClick={() => {
+          if (commentsVisible) {
+            setCommentsVisible(false)
+          } else {
+            setCommentsVisible(true)
+          }
+        }}
+      />
+      {commentsNumber}
+    </Box>
+  )
   return (
     <>
       {createCommentInput ? (
@@ -66,11 +68,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, postId
           onSubmit={async (values: { text: string }) => {
             setCreateCommentInput(false)
             await createComment({
-              variables: { ...values, postId: postId },
-              // update: (cache) => {
-              //   cache.evict({ fieldName: 'posts' }) // need to decide what to do with cache,
-              // // maybe fetch comments separately
-              // },
+              variables: { ...values, postId: id },
+              update: (cache) => {
+                console.log(cache)
+                updateAfterComment(id, cache)
+              },
             })
           }}
         >
@@ -87,16 +89,19 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, postId
           </Form>
         </Formik>
       ) : (
-        <IconButton
-          aria-label={'Add comment'}
-          icon={<AddIcon />}
-          size={'sm'}
-          onClick={() => {
-            setCreateCommentInput((prevState) => !prevState)
-          }}
-        />
+        <Box>
+          <IconButton
+            aria-label={'Add comment'}
+            icon={<AddIcon />}
+            size={'sm'}
+            onClick={() => {
+              setCreateCommentInput((prevState) => !prevState)
+            }}
+          />
+          {commentsButton}
+          {commentsVisible && <CommentsStack postId={id} />}
+        </Box>
       )}
-      {body}
     </>
   )
 }

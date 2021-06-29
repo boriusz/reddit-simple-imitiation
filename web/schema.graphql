@@ -25,7 +25,7 @@ type Mutation {
     changePassword(newPassword: String!, token: String!): UserResponse!
     createComment(postId: Int!, text: String!): Comment!
     createPost(input: CreatePostInput!): Post!
-    deleteComment(commentId: Int!): Comment
+    deleteComment(commentId: Int!): Boolean
     deletePost(id: Int!): Boolean!
     editComment(commentId: Int!, text: String!): Comment!
     forgotPassword(email: String!): Boolean!
@@ -43,6 +43,7 @@ type PaginatedPosts {
 
 type Post {
     comments: [Comment!]!
+    commentsNumber: Int!
     createdAt: String!
     creator: User!
     creatorId: Float!

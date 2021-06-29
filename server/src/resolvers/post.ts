@@ -15,7 +15,7 @@ import { Post } from '../entities/Post'
 import { CreatePostInput } from '../utils/CreatePostInput'
 import { MyContext } from '../types'
 import { isAuth } from '../middleware/isAuth'
-import { FindManyOptions, getConnection, LessThan } from 'typeorm'
+import { getConnection } from 'typeorm'
 import { Upvote } from '../entities/Upvote'
 
 @ObjectType()
@@ -51,20 +51,44 @@ export class PostResolver {
   ): Promise<PaginatedPosts> {
     const actualLimit = Math.min(50, limit) + 1
 
-    const options: FindManyOptions = {
-      take: actualLimit,
-      order: { createdAt: 'DESC' },
-    }
+    const replacements: unknown[] = [actualLimit, userId]
     if (cursor) {
-      options.where = {
-        createdAt: LessThan(new Date(parseInt(cursor))),
-      }
+      replacements.push(new Date(parseInt(cursor)))
     }
 
-    const posts = (await Post.find(options)).map((p) => ({
-      ...p,
-      voteStatus: p.upvotes.find((uv: Upvote) => uv.userId === userId)?.value ?? null,
-    }))
+    const posts: Post[] = (
+      await getConnection().query(
+        `
+        SELECT COUNT(comment."postId") as "commentsNumber", upvote."value" as "voteStatus", post.id, post."createdAt",
+               post."updatedAt", post."text", post."title", post."points", "user".username as "creator_username", "user".id as "creator_id"
+        FROM post
+                 LEFT JOIN "user" on "user".id = post."creatorId"
+                 LEFT JOIN upvote on upvote."postId" = post.id and upvote."userId" = $2 
+                 LEFT JOIN comment on comment."postId" = post.id
+        GROUP BY post.id, "user".id, upvote.value
+        ${cursor ? 'WHERE post."createdAt" < $3' : ''}
+        ORDER BY post."createdAt" DESC
+        LIMIT $1
+    `,
+        replacements
+      )
+    ).map(
+      (
+        p: Post & {
+          creator_username: string
+          creator_id: number
+          voteStatus: number
+          commentsNumber: string
+        }
+      ) => ({
+        ...p,
+        commentsNumber: Number(p.commentsNumber),
+        creator: {
+          username: p.creator_username,
+          id: p.creator_id,
+        },
+      })
+    )
 
     return { posts: posts.slice(0, actualLimit - 1), hasMore: posts.length === actualLimit }
   }

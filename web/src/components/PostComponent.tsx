@@ -2,12 +2,7 @@ import React from 'react'
 import { Box, Flex, Heading, IconButton, Link, Text } from '@chakra-ui/react'
 import { UpvoteSection } from './UpvoteSection'
 import NextLink from 'next/link'
-import {
-  PostCommentFragment,
-  PostSnippetFragment,
-  useDeletePostMutation,
-  useMeQuery,
-} from '../generated/graphql'
+import { PostSnippetFragment, useDeletePostMutation, useMeQuery } from '../generated/graphql'
 import { EditPostModal } from './EditPostModal'
 import { DeleteIcon } from '@chakra-ui/icons'
 import { CommentSection } from './CommentSection'
@@ -55,7 +50,7 @@ export const PostComponent: React.FC<PostProps> = ({ post }) => {
           </Flex>
         </Box>
       </Flex>
-      <CommentSection comments={post.comments as PostCommentFragment[]} postId={post.id} />
+      <CommentSection post={post} />
     </Box>
   )
 }

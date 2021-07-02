@@ -1,15 +1,17 @@
 import React, { useState } from 'react'
 import {
   CreateCommentMutation,
+  PostCommentFragment,
   PostSnippetFragment,
   useCreateCommentMutation,
+  usePostCommentsLazyQuery,
 } from '../generated/graphql'
-import { Box, Button, IconButton } from '@chakra-ui/react'
+import { Box, Button, IconButton, VStack } from '@chakra-ui/react'
 import { AddIcon, ChatIcon } from '@chakra-ui/icons'
 import { Form, Formik } from 'formik'
 import { InputField } from './InputField'
-import { CommentsStack } from './CommentsStack'
 import { ApolloCache, gql } from '@apollo/client'
+import { Comment } from './Comment'
 
 interface CommentSectionProps {
   post: PostSnippetFragment
@@ -29,7 +31,7 @@ const updateAfterComment = (postId: number, cache: ApolloCache<CreateCommentMuta
     cache.writeFragment({
       id: 'Post:' + postId,
       fragment: gql`
-        fragment __ on Post {
+        fragment ____ on Post {
           commentsNumber
         }
       `,
@@ -41,67 +43,88 @@ const updateAfterComment = (postId: number, cache: ApolloCache<CreateCommentMuta
 export const CommentSection: React.FC<CommentSectionProps> = ({ post: { commentsNumber, id } }) => {
   const [commentsVisible, setCommentsVisible] = useState(false)
   const [createComment] = useCreateCommentMutation()
+  const [getComments, { data, refetch }] = usePostCommentsLazyQuery({ variables: { id } })
 
   const [createCommentInput, setCreateCommentInput] = useState(false)
-  const commentsButton = (
-    <Box>
+  const CommentManagementButtons = (
+    <>
       <IconButton
+        variant={'outline'}
+        aria-label={'Add comment'}
+        icon={<AddIcon />}
+        size={'sm'}
+        onClick={() => {
+          setCreateCommentInput((prevState) => !prevState)
+        }}
+      />
+      <IconButton
+        variant={'outline'}
         icon={<ChatIcon />}
         aria-label={'Comments load and count'}
         size={'sm'}
+        ml={'1px'}
         onClick={() => {
           if (commentsVisible) {
             setCommentsVisible(false)
           } else {
             setCommentsVisible(true)
+            getComments()
           }
         }}
       />
       {commentsNumber}
-    </Box>
+    </>
   )
+
+  const CreateCommentForm = (
+    <Formik
+      initialValues={{ text: '' }}
+      onSubmit={async (values: { text: string }) => {
+        setCreateCommentInput(false)
+        await createComment({
+          variables: { ...values, postId: id },
+          update: (cache) => {
+            updateAfterComment(id, cache)
+          },
+        })
+        if (refetch) {
+          await refetch()
+        }
+      }}
+    >
+      <Form style={{ margin: 0, padding: 0 }}>
+        <InputField label={'Comment Text'} name={'text'} placeholder={'comment text'} textarea />
+        <Button type={'submit'} size={'sm'}>
+          Add
+        </Button>
+        <Button
+          onClick={() => {
+            setCreateCommentInput(false)
+          }}
+          size={'sm'}
+        >
+          Cancel
+        </Button>
+      </Form>
+    </Formik>
+  )
+
   return (
     <>
-      {createCommentInput ? (
-        <Formik
-          initialValues={{ text: '' }}
-          onSubmit={async (values: { text: string }) => {
-            setCreateCommentInput(false)
-            await createComment({
-              variables: { ...values, postId: id },
-              update: (cache) => {
-                console.log(cache)
-                updateAfterComment(id, cache)
-              },
-            })
-          }}
-        >
-          <Form style={{ margin: 0, padding: 0 }}>
-            <InputField
-              label={'Comment Text'}
-              name={'text'}
-              placeholder={'comment text'}
-              textarea
-            />
-            <Button type={'submit'} size={'sm'}>
-              Dodaj
-            </Button>
-          </Form>
-        </Formik>
-      ) : (
-        <Box>
-          <IconButton
-            aria-label={'Add comment'}
-            icon={<AddIcon />}
-            size={'sm'}
-            onClick={() => {
-              setCreateCommentInput((prevState) => !prevState)
-            }}
-          />
-          {commentsButton}
-          {commentsVisible && <CommentsStack postId={id} />}
-        </Box>
-      )}
+      {createCommentInput ? CreateCommentForm : null}
+      <Box>
+        <Box m={1}>{CommentManagementButtons}</Box>
+        {commentsVisible && (
+          <VStack spacing={0}>
+            {data?.postComments
+              .slice()
+              .sort((a, b) => Number(a.createdAt) - Number(b.createdAt))
+              .map((comment: PostCommentFragment) => (
+                <Comment key={comment.id} comment={comment} postId={id} refetch={refetch} />
+              ))}
+          </VStack>
+        )}
+      </Box>
     </>
   )
 }

@@ -64,9 +64,9 @@ export class PostResolver {
         FROM post
                  LEFT JOIN "user" on "user".id = post."creatorId"
                  LEFT JOIN upvote on upvote."postId" = post.id and upvote."userId" = $2 
-                 LEFT JOIN comment on comment."postId" = post.id
+                 LEFT JOIN comment on comment."postId" = post.id 
+            ${cursor ? `WHERE post."createdAt" < $3` : ''}
         GROUP BY post.id, "user".id, upvote.value
-        ${cursor ? 'WHERE post."createdAt" < $3' : ''}
         ORDER BY post."createdAt" DESC
         LIMIT $1
     `,
